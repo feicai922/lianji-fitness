@@ -1,0 +1,61 @@
+{
+  "pages": [
+    {
+      "path": "pages/train/index",
+      "style": {
+        "navigationBarTitleText": "训练记录",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/weight/index",
+      "style": {
+        "navigationBarTitleText": "体重管理",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/detail/index",
+      "style": {
+        "navigationBarTitleText": "动作教程",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "健身记录",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#ffffff",
+    "backgroundTextStyle": "light"
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^u-(.*)": "@/uni_modules/uview-plus/components/u-$1/u-$1.vue",
+      "^qiun-(.*)": "@/uni_modules/qiun-data-charts/components/qiun-$1/qiun-$1.vue"
+    }
+  },
+  "tabBar": {
+    "color": "#9aa0a6",
+    "selectedColor": "#17191c",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "height": "54px",
+    "list": [
+      {
+        "pagePath": "pages/train/index",
+        "text": "训练记录"
+      },
+      {
+        "pagePath": "pages/weight/index",
+        "text": "体重管理"
+      }
+    ]
+  }
+}

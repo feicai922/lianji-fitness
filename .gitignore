@@ -1,0 +1,43 @@
+# Dependencies
+**/node_modules/
+
+# HBuilderX and UniApp build output
+**/dist/
+**/unpackage/
+**/.hbuilderx/
+
+# Agent/editor state
+**/.superpowers/
+**/.vscode/
+**/.idea/
+
+# Logs and temporary files
+**/*.log
+**/*.tmp
+**/*.bak
+*.log
+*.tmp
+*.bak
+
+# Local secrets and signing files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+**/*.keystore
+**/*.jks
+**/*.p12
+
+# Original dataset used only to regenerate processed assets
+**/exercises-dataset-main/
+
+# Android packages are uploaded as GitHub Release assets, not source files
+*.apk
+*.aab
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

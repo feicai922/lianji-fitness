@@ -1,0 +1,15 @@
+{
+  "name": "fitness-record-uniapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean-data": "node scripts/clean_exercises.cjs",
+    "test:data": "node --test scripts/clean_exercises.test.cjs utils/sqlite.test.cjs utils/catalog.test.cjs utils/media.test.cjs"
+  },
+  "dependencies": {
+    "@dcloudio/uni-ui": "^1.5.11",
+    "uview-plus": "^3.4.20",
+    "uni-data-charts": "^1.0.0"
+  }
+}

@@ -1,0 +1,52 @@
+$app-text: #17191c;
+$app-muted: #8d949b;
+$app-line: #e7e9eb;
+$app-soft: #f6f7f8;
+$app-accent: #17191c;
+
+page {
+  background: #ffffff;
+  color: $app-text;
+  font-size: 30rpx;
+}
+
+.page-shell {
+  min-height: 100vh;
+  padding: 34rpx 64rpx 80rpx;
+  background: #ffffff;
+}
+
+.page-title {
+  color: $app-text;
+  font-size: 54rpx;
+  font-weight: 700;
+  letter-spacing: -1rpx;
+}
+
+.page-subtitle {
+  margin-top: 10rpx;
+  color: $app-muted;
+  font-size: 27rpx;
+}
+
+.empty-state {
+  padding: 140rpx 40rpx;
+  color: $app-muted;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.divider {
+  border-bottom: 1rpx solid $app-line;
+}
+
+.primary-button {
+  background: $app-accent;
+  color: #ffffff;
+}
+
+.ghost-button {
+  border: 1rpx solid $app-line;
+  background: #ffffff;
+  color: #555d64;
+}
