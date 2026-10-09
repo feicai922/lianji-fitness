@@ -7,6 +7,21 @@
       </view>
     </view>
 
+    <view class="card-card">
+      <view class="card-heading">
+        <text class="card-title">健身房卡</text>
+        <text v-if="cardStatus" class="card-edit" @click="openCardEditor">修改</text>
+      </view>
+      <view v-if="cardStatus" class="card-status" :style="{ color: cardStatus.color, background: cardStatus.background }">
+        <text class="card-days">{{ cardStatus.label }}</text>
+        <text class="card-expire">到期日 {{ cardStatus.expireDate }}</text>
+      </view>
+      <view v-else class="card-empty">
+        <text class="card-empty-hint">还没有设置到期时间</text>
+        <button class="card-set-button" @click="openCardEditor">设置到期时间</button>
+      </view>
+    </view>
+
     <view class="calendar-card">
       <view class="month-header">
         <view class="month-button" @click="changeMonth(-1)">‹</view>
@@ -42,21 +57,6 @@
       <text class="section-title">今天的打卡</text>
       <text class="today-hint">{{ todayMessage }}</text>
       <button class="cardio-button" :disabled="cardioDisabled" @click="checkCardio">{{ cardioButtonText }}</button>
-    </view>
-
-    <view class="card-card">
-      <view class="card-heading">
-        <text class="section-title">健身房卡</text>
-        <text v-if="cardStatus" class="card-edit" @click="openCardEditor">修改</text>
-      </view>
-      <view v-if="cardStatus" class="card-status" :style="{ color: cardStatus.color, background: cardStatus.background }">
-        <text class="card-days">{{ cardStatus.label }}</text>
-        <text class="card-expire">到期日 {{ cardStatus.expireDate }}</text>
-      </view>
-      <view v-else class="card-empty">
-        <text class="card-empty-hint">还没有设置到期时间</text>
-        <button class="card-set-button" @click="openCardEditor">设置到期时间</button>
-      </view>
     </view>
 
     <view class="summary-card">
@@ -268,13 +268,14 @@ export default {
 .empty-parts { display: block; margin-top: 16rpx; color: #9aa0a6; font-size: 23rpx; }
 .unmatched-hint { display: block; margin-top: 16rpx; color: #9aa0a6; font-size: 22rpx; line-height: 1.5; }
 .card-heading { display: flex; align-items: center; justify-content: space-between; }
-.card-edit { color: #555d64; font-size: 24rpx; }
-.card-status { display: flex; align-items: baseline; justify-content: space-between; margin-top: 22rpx; padding: 26rpx 24rpx; border-radius: 14rpx; }
-.card-days { font-size: 40rpx; font-weight: 700; }
-.card-expire { font-size: 23rpx; opacity: .8; }
-.card-empty { margin-top: 20rpx; }
-.card-empty-hint { display: block; margin-bottom: 18rpx; color: #9aa0a6; font-size: 24rpx; }
-.card-set-button { height: 72rpx; margin: 0; border-radius: 12rpx; background: #17191c; color: #ffffff; font-size: 26rpx; line-height: 72rpx; }
+.card-title { color: #555d64; font-size: 26rpx; font-weight: 700; }
+.card-edit { color: #8d949b; font-size: 22rpx; }
+.card-status { display: flex; align-items: baseline; justify-content: space-between; margin-top: 16rpx; padding: 18rpx 20rpx; border-radius: 12rpx; }
+.card-days { font-size: 30rpx; font-weight: 700; }
+.card-expire { font-size: 21rpx; opacity: .8; }
+.card-empty { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 14rpx; }
+.card-empty-hint { color: #9aa0a6; font-size: 22rpx; }
+.card-set-button { flex-shrink: 0; height: 56rpx; margin: 0; padding: 0 22rpx; border-radius: 10rpx; background: #17191c; color: #ffffff; font-size: 23rpx; line-height: 56rpx; }
 .modal-layer { position: fixed; z-index: 30; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30rpx; background: rgba(23,25,28,.32); }
 .card-editor-panel { width: 100%; padding: 38rpx 32rpx 30rpx; border-radius: 22rpx; background: #ffffff; }
 .form-title { display: block; color: #17191c; font-size: 36rpx; font-weight: 700; }

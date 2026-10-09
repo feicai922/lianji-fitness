@@ -27,7 +27,11 @@
     </view>
 
     <view v-if="weights.length" class="chart-section">
-      <view class="section-heading"><text>趋势</text><text class="section-note">最近 {{ weights.length }} 条记录</text></view>
+      <view class="section-heading">
+        <text>趋势</text>
+        <text v-if="hasMore" class="section-toggle" @click="toggleFullChart">{{ showAll ? '只看近 7 次' : '加载全部 ' + weights.length + ' 次' }}</text>
+        <text v-else class="section-note">{{ chartRows.length }} 次记录</text>
+      </view>
       <view class="chart-card">
         <qiun-data-charts type="line" :chart-data="chartData" :opts="chartOpts" :ontouch="true" />
       </view>
@@ -51,34 +55,50 @@
 import { initDb, listWeights, addWeight, removeWeight } from '@/utils/sqlite'
 import { validateWeight } from '@/utils/validators'
 
+// 默认在图上渲染的最近记录条数。
+const RECENT_COUNT = 7
+
 export default {
   data() {
-    return { weightInput: '', weights: [] }
+    return { weightInput: '', weights: [], showAll: false }
   },
   computed: {
+    // 默认只画最近 7 次，避免记录变多后一次性渲染全部数据拖慢页面。
+    chartRows() {
+      const rows = this.weights.slice(0, RECENT_COUNT).slice().reverse()
+      return rows
+    },
+    fullChartRows() {
+      return this.weights.slice().reverse()
+    },
+    hasMore() {
+      return this.weights.length > RECENT_COUNT
+    },
+    visibleRows() {
+      return this.showAll ? this.fullChartRows : this.chartRows
+    },
     chartData() {
-      const rows = this.weights.slice().reverse()
+      const rows = this.visibleRows
       return {
         categories: rows.map((item) => item.recordDate.slice(5).replace('-', '/')),
         series: [{ name: '体重', data: rows.map((item) => Number(item.weight)) }]
       }
     },
     chartOpts() {
-      // qiun/uCharts 在 enableScroll 时用 xAxis.itemCount 计算点间距；
-      // 不显式赋值会让 eachSpacing 变成 NaN，所有点坐标失效、整张图不渲染。
-      const enableScroll = this.weights.length > 7
+      const count = this.visibleRows.length
       return {
         color: ['#8b939a'],
         padding: [20, 12, 10, 12],
-        enableScroll,
+        // 不画数据点，只保留折线趋势，避免点密集时糊成一片。
+        dataPointShape: false,
         legend: { show: false },
         xAxis: {
           disableGrid: true,
           axisLineColor: '#e7e9eb',
           labelTextColor: '#9aa0a6',
-          itemCount: enableScroll ? 7 : this.weights.length,
-          scrollShow: true,
-          scrollAlign: 'right'
+          // 打开横向滚动后标签会重叠，用 labelCount 控制显示密度。
+          labelCount: count <= 7 ? count : 6,
+          boundaryGap: 'center'
         },
         yAxis: { gridType: 'dash', dashLength: 2, gridColor: '#eef0f1', axisLineColor: '#ffffff', labelTextColor: '#9aa0a6' },
         extra: { line: { type: 'curve', width: 2, activeType: 'hollow' } }
@@ -97,6 +117,10 @@ export default {
     this.loadWeights()
   },
   methods: {
+    // 全量曲线要手动点开，避免每次进页面都渲染全部记录。
+    toggleFullChart() {
+      this.showAll = !this.showAll
+    },
     async loadWeights() {
       try {
         await initDb()
@@ -157,6 +181,7 @@ export default {
 .chart-section { margin-top: 48rpx; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; color: #17191c; font-size: 34rpx; font-weight: 700; }
 .section-note { color: #9aa0a6; font-size: 22rpx; font-weight: 400; }
+.section-toggle { padding: 6rpx 16rpx; border: 1rpx solid #e1e4e7; border-radius: 999rpx; color: #555d64; font-size: 22rpx; font-weight: 400; }
 .chart-card { height: 390rpx; margin-top: 20rpx; padding: 20rpx 14rpx; border: 1rpx solid #eef0f1; border-radius: 20rpx; background: #ffffff; box-shadow: 0 12rpx 28rpx rgba(23,25,28,.03); }
 .chart-empty { padding: 130rpx 0 80rpx; }
 .history-section { margin-top: 52rpx; }
