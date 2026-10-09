@@ -137,3 +137,39 @@ test('exports check-ins and imports legacy backups without them', async () => {
   await db.importData({ version: 1, data: { exercise: [], train_record: [], weight_record: [] }, preferences: {} })
   assert.deepEqual(await db.listCheckIns(), [])
 })
+
+test('stores a single gym card and overwrites it on save', async () => {
+  const db = await import('./sqlite.js')
+  db.resetForTests()
+  assert.equal(await db.getGymCard(), null)
+  await db.saveGymCard('2026-12-31')
+  assert.equal((await db.getGymCard()).expireDate, '2026-12-31')
+  await db.saveGymCard('2027-03-01')
+  assert.equal((await db.getGymCard()).expireDate, '2027-03-01')
+  // 只保留一条记录
+  const backup = await db.exportData()
+  assert.equal(backup.data.gym_card.length, 1)
+  // 空日期等于清除
+  await db.saveGymCard('')
+  assert.equal(await db.getGymCard(), null)
+})
+
+test('round-trips the gym card through export and import', async () => {
+  const db = await import('./sqlite.js')
+  db.resetForTests()
+  await db.saveGymCard('2026-11-20')
+  const backup = await db.exportData()
+  assert.equal(backup.data.gym_card.length, 1)
+  db.resetForTests()
+  assert.equal(await db.getGymCard(), null)
+  await db.importData(backup)
+  assert.equal((await db.getGymCard()).expireDate, '2026-11-20')
+})
+
+test('importing a backup without a gym card clears any existing one', async () => {
+  const db = await import('./sqlite.js')
+  db.resetForTests()
+  await db.saveGymCard('2026-11-20')
+  await db.importData({ version: 1, data: { exercise: [], train_record: [], weight_record: [] }, preferences: {} })
+  assert.equal(await db.getGymCard(), null)
+})

@@ -1,6 +1,7 @@
 import { formatDate } from './date.js'
 import { createBackup, parseBackup } from './backup.js'
 import { normalizeCheckIn } from './checkIn.js'
+import { normalizeGymCard } from './gymCard.js'
 
 const DB_NAME = 'fitness_record'
 const STORAGE_KEY = 'fitness_record_store_v1'
@@ -9,6 +10,7 @@ const EMPTY_STORE = {
   train_record: [],
   weight_record: [],
   check_in: [],
+  gym_card: [],
   sequence: { recordId: 0, wid: 0 }
 }
 
@@ -44,6 +46,7 @@ function normalizeStore(store) {
     train_record: Array.isArray(result.train_record) ? result.train_record : [],
     weight_record: Array.isArray(result.weight_record) ? result.weight_record : [],
     check_in: Array.isArray(result.check_in) ? result.check_in : [],
+    gym_card: Array.isArray(result.gym_card) ? result.gym_card : [],
     sequence: {
       recordId: Number(result.sequence && result.sequence.recordId) || 0,
       wid: Number(result.sequence && result.sequence.wid) || 0
@@ -88,6 +91,7 @@ async function initDb() {
       }
       await executeNative('CREATE TABLE IF NOT EXISTS weight_record (wid INTEGER PRIMARY KEY AUTOINCREMENT, weight REAL NOT NULL, recordDate TEXT NOT NULL)')
       await executeNative("CREATE TABLE IF NOT EXISTS check_in (checkDate TEXT PRIMARY KEY, cardioChecked INTEGER NOT NULL DEFAULT 0, trainingPartsJson TEXT NOT NULL DEFAULT '[]')")
+      await executeNative('CREATE TABLE IF NOT EXISTS gym_card (cardId INTEGER PRIMARY KEY, expireDate TEXT NOT NULL, updatedAt TEXT)')
       nativeReady = true
     } catch (error) {
       nativeReady = false
@@ -168,6 +172,14 @@ function inflateCheckIn(row) {
     checkDate: row.checkDate,
     cardioChecked: Boolean(Number(row.cardioChecked)),
     trainingParts
+  })
+}
+
+function inflateGymCard(row) {
+  if (!row) return null
+  return normalizeGymCard({
+    expireDate: row.expireDate,
+    updatedAt: row.updatedAt
   })
 }
 
@@ -358,16 +370,52 @@ async function saveCheckIn(value) {
   )
 }
 
+// 健身房卡只有一张，固定 cardId = 1。
+async function getGymCard() {
+  const rows = await query(
+    'SELECT cardId, expireDate, updatedAt FROM gym_card WHERE cardId = 1',
+    (store) => store.gym_card.filter((item) => Number(item.cardId) === 1)
+  )
+  return inflateGymCard(rows[0])
+}
+
+async function saveGymCard(expireDate) {
+  const row = normalizeGymCard({ expireDate, updatedAt: new Date().toISOString() })
+  if (!row) return deleteGymCard()
+  return run(
+    'INSERT OR REPLACE INTO gym_card (cardId, expireDate, updatedAt) VALUES (1, ' +
+      sqlText(row.expireDate) + ', ' + sqlText(row.updatedAt) + ')',
+    (store) => {
+      const saved = { cardId: 1, expireDate: row.expireDate, updatedAt: row.updatedAt }
+      const index = store.gym_card.findIndex((item) => Number(item.cardId) === 1)
+      if (index >= 0) store.gym_card.splice(index, 1, saved)
+      else store.gym_card.push(saved)
+      return { expireDate: row.expireDate, updatedAt: row.updatedAt }
+    }
+  )
+}
+
+async function deleteGymCard() {
+  return run(
+    'DELETE FROM gym_card WHERE cardId = 1',
+    (store) => {
+      store.gym_card = store.gym_card.filter((item) => Number(item.cardId) !== 1)
+      return null
+    }
+  )
+}
+
 async function exportData(preferences = {}) {
   await initDb()
   if (nativeReady) {
-    const [exercise, train_record, weight_record, check_in] = await Promise.all([
+    const [exercise, train_record, weight_record, check_in, gym_card] = await Promise.all([
       selectNative('SELECT id, nameZh, targetPart, mediaId, instructionsZh FROM exercise'),
       selectNative('SELECT recordId, exerciseId, weight, sets, reps, setDetailsJson, trainDate FROM train_record'),
       selectNative('SELECT wid, weight, recordDate FROM weight_record'),
-      selectNative('SELECT checkDate, cardioChecked, trainingPartsJson FROM check_in')
+      selectNative('SELECT checkDate, cardioChecked, trainingPartsJson FROM check_in'),
+      selectNative('SELECT cardId, expireDate, updatedAt FROM gym_card')
     ])
-    return createBackup({ exercise, train_record, weight_record, check_in }, new Date().toISOString(), preferences)
+    return createBackup({ exercise, train_record, weight_record, check_in, gym_card }, new Date().toISOString(), preferences)
   }
   return createBackup(readFallback(), new Date().toISOString(), preferences)
 }
@@ -395,7 +443,10 @@ function normalizeImportedData(data) {
       weight: Number(row.weight),
       recordDate: String(row.recordDate || '')
     })).filter((row) => Number.isInteger(row.wid) && row.wid > 0 && Number.isFinite(row.weight) && row.recordDate),
-    check_in: (data.check_in || []).map(inflateCheckIn).filter(Boolean)
+    check_in: (data.check_in || []).map(inflateCheckIn).filter(Boolean),
+    // 存回本地时始终带上固定的 cardId，否则读取端按 cardId = 1 查不到这张卡。
+    gym_card: (data.gym_card || []).map(inflateGymCard).filter(Boolean).slice(0, 1)
+      .map((card) => ({ cardId: 1, expireDate: card.expireDate, updatedAt: card.updatedAt }))
   }
 }
 
@@ -408,6 +459,7 @@ async function importData(payload) {
     await executeNative('DELETE FROM exercise')
     await executeNative('DELETE FROM weight_record')
     await executeNative('DELETE FROM check_in')
+    await executeNative('DELETE FROM gym_card')
     for (const row of data.exercise) {
       await executeNative('INSERT OR REPLACE INTO exercise (id, nameZh, targetPart, mediaId, instructionsZh) VALUES (' +
         sqlText(row.id) + ', ' + sqlText(row.nameZh) + ', ' + sqlText(row.targetPart) + ', ' +
@@ -425,6 +477,10 @@ async function importData(payload) {
     for (const row of data.check_in) {
       await executeNative('INSERT INTO check_in (checkDate, cardioChecked, trainingPartsJson) VALUES (' +
         sqlText(row.checkDate) + ', ' + Number(row.cardioChecked) + ', ' + sqlText(JSON.stringify(row.trainingParts)) + ')')
+    }
+    for (const row of data.gym_card) {
+      await executeNative('INSERT OR REPLACE INTO gym_card (cardId, expireDate, updatedAt) VALUES (1, ' +
+        sqlText(row.expireDate) + ', ' + sqlNullableText(row.updatedAt) + ')')
     }
     return backup
   }
@@ -464,10 +520,14 @@ export {
   getCheckIn,
   saveCheckIn,
   deleteCheckIn,
+  getGymCard,
+  saveGymCard,
+  deleteGymCard,
   exportData,
   importData,
   normalizeSetDetails,
   inflateTrainRecord,
   inflateCheckIn,
+  inflateGymCard,
   resetForTests
 }

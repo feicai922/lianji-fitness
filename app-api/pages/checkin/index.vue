@@ -44,6 +44,21 @@
       <button class="cardio-button" :disabled="cardioDisabled" @click="checkCardio">{{ cardioButtonText }}</button>
     </view>
 
+    <view class="card-card">
+      <view class="card-heading">
+        <text class="section-title">健身房卡</text>
+        <text v-if="cardStatus" class="card-edit" @click="openCardEditor">修改</text>
+      </view>
+      <view v-if="cardStatus" class="card-status" :style="{ color: cardStatus.color, background: cardStatus.background }">
+        <text class="card-days">{{ cardStatus.label }}</text>
+        <text class="card-expire">到期日 {{ cardStatus.expireDate }}</text>
+      </view>
+      <view v-else class="card-empty">
+        <text class="card-empty-hint">还没有设置到期时间</text>
+        <button class="card-set-button" @click="openCardEditor">设置到期时间</button>
+      </view>
+    </view>
+
     <view class="summary-card">
       <text class="section-title">本月统计</text>
       <view class="summary-row">
@@ -56,14 +71,31 @@
         <text v-for="item in partSummary" :key="item.part" class="part-chip">{{ item.part }} {{ item.days }} 天</text>
       </view>
       <text v-else class="empty-parts">本月还没有打卡记录</text>
+      <text v-if="unmatchedHint" class="unmatched-hint">{{ unmatchedHint }}</text>
+    </view>
+
+    <view v-if="cardEditor.visible" class="modal-layer" @click.self="closeCardEditor">
+      <view class="card-editor-panel">
+        <text class="form-title">健身房卡到期时间</text>
+        <text class="form-subtitle">选择卡到期的那一天</text>
+        <picker mode="date" :value="cardEditor.expireDate" :start="todayKey" @change="onCardDateChange">
+          <view class="date-picker-value">{{ cardEditor.expireDate || '请选择日期' }}</view>
+        </picker>
+        <view class="form-actions">
+          <button class="form-button ghost" @click="closeCardEditor">取消</button>
+          <button class="form-button dark" @click="saveCardEditor">保存</button>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script>
 import { formatDate } from '@/utils/date'
-import { getCheckIn, listCheckIns, saveCheckIn } from '@/utils/sqlite'
+import { getCheckIn, listCheckIns, saveCheckIn, getGymCard, saveGymCard } from '@/utils/sqlite'
 import { createCardioCheckIn, createMonthGrid, summarizeMonth } from '@/utils/checkIn'
+import { loadParts, resolvePartLabel } from '@/utils/trainParts'
+import { getCardStatus } from '@/utils/gymCard'
 
 export default {
   data() {
@@ -71,24 +103,51 @@ export default {
       monthKey: formatDate().slice(0, 7),
       records: [],
       loading: true,
-      weekdays: ['一', '二', '三', '四', '五', '六', '日']
+      weekdays: ['一', '二', '三', '四', '五', '六', '日'],
+      gymCard: null,
+      cardEditor: { visible: false, expireDate: '' }
     }
   },
   computed: {
+    todayKey() {
+      return formatDate()
+    },
     monthTitle() {
       const [year, month] = this.monthKey.split('-')
       return year + ' 年 ' + Number(month) + ' 月'
+    },
+    // 只把「训练记录」页真实存在的部位标签交给统计，未命中的动作不计入部位天数。
+    knownParts() {
+      return loadParts().map((part) => part.label).filter(Boolean)
+    },
+    // 旧记录里存的是细分部位（背阔肌），按当前标签映射一次再统计。
+    mappedRecords() {
+      const parts = loadParts()
+      return this.records.map((record) => ({
+        ...record,
+        trainingParts: [...new Set(record.trainingParts
+          .map((part) => resolvePartLabel(parts, { target: part }))
+          .filter(Boolean))]
+      }))
     },
     calendarDays() {
       return createMonthGrid(this.monthKey, this.records, formatDate())
     },
     summary() {
-      return summarizeMonth(this.records, this.monthKey)
+      return summarizeMonth(this.mappedRecords, this.monthKey, this.knownParts)
+    },
+    unmatchedHint() {
+      const days = this.summary.unmatchedDays
+      if (!days) return ''
+      return '有 ' + days + ' 天训练的动作还没有对应的部位标签，未计入上方统计'
     },
     partSummary() {
       return Object.entries(this.summary.partDays)
         .map(([part, days]) => ({ part, days }))
         .sort((a, b) => b.days - a.days || a.part.localeCompare(b.part, 'zh-CN'))
+    },
+    cardStatus() {
+      return this.gymCard ? getCardStatus(this.gymCard.expireDate) : null
     },
     todayRecord() {
       const today = formatDate()
@@ -113,8 +172,38 @@ export default {
   },
   onShow() {
     this.loadMonth()
+    this.loadGymCard()
   },
   methods: {
+    async loadGymCard() {
+      try {
+        this.gymCard = await getGymCard()
+      } catch (error) {
+        // 卡片信息读取失败不影响打卡主流程。
+      }
+    },
+    openCardEditor() {
+      this.cardEditor = {
+        visible: true,
+        expireDate: (this.gymCard && this.gymCard.expireDate) || this.todayKey
+      }
+    },
+    closeCardEditor() {
+      this.cardEditor.visible = false
+    },
+    onCardDateChange(event) {
+      this.cardEditor.expireDate = event.detail.value
+    },
+    async saveCardEditor() {
+      try {
+        await saveGymCard(this.cardEditor.expireDate)
+        await this.loadGymCard()
+        this.closeCardEditor()
+        uni.showToast({ title: '到期时间已保存', icon: 'none' })
+      } catch (error) {
+        uni.showToast({ title: '保存失败，请重试', icon: 'none' })
+      }
+    },
     async loadMonth() {
       this.loading = true
       try {
@@ -150,7 +239,7 @@ export default {
 
 <style scoped>
 .checkin-page { padding-bottom: 48rpx; }
-.calendar-card, .today-card, .summary-card { margin-top: 28rpx; padding: 30rpx 26rpx; border: 1rpx solid #eceef0; border-radius: 22rpx; background: #ffffff; box-shadow: 0 12rpx 30rpx rgba(23, 25, 28, .05); }
+.calendar-card, .today-card, .summary-card, .card-card { margin-top: 28rpx; padding: 30rpx 26rpx; border: 1rpx solid #eceef0; border-radius: 22rpx; background: #ffffff; box-shadow: 0 12rpx 30rpx rgba(23, 25, 28, .05); }
 .month-header { display: flex; align-items: center; justify-content: space-between; }
 .month-title, .section-title { color: #17191c; font-size: 32rpx; font-weight: 700; }
 .month-button { display: flex; align-items: center; justify-content: center; width: 62rpx; height: 62rpx; border: 1rpx solid #e1e4e7; border-radius: 50%; color: #555d64; font-size: 46rpx; line-height: 1; }
@@ -177,4 +266,22 @@ export default {
 .part-chips { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 16rpx; }
 .part-chip { padding: 10rpx 16rpx; border-radius: 999rpx; background: #edf7ef; color: #276749; font-size: 23rpx; }
 .empty-parts { display: block; margin-top: 16rpx; color: #9aa0a6; font-size: 23rpx; }
+.unmatched-hint { display: block; margin-top: 16rpx; color: #9aa0a6; font-size: 22rpx; line-height: 1.5; }
+.card-heading { display: flex; align-items: center; justify-content: space-between; }
+.card-edit { color: #555d64; font-size: 24rpx; }
+.card-status { display: flex; align-items: baseline; justify-content: space-between; margin-top: 22rpx; padding: 26rpx 24rpx; border-radius: 14rpx; }
+.card-days { font-size: 40rpx; font-weight: 700; }
+.card-expire { font-size: 23rpx; opacity: .8; }
+.card-empty { margin-top: 20rpx; }
+.card-empty-hint { display: block; margin-bottom: 18rpx; color: #9aa0a6; font-size: 24rpx; }
+.card-set-button { height: 72rpx; margin: 0; border-radius: 12rpx; background: #17191c; color: #ffffff; font-size: 26rpx; line-height: 72rpx; }
+.modal-layer { position: fixed; z-index: 30; inset: 0; display: flex; align-items: center; justify-content: center; padding: 30rpx; background: rgba(23,25,28,.32); }
+.card-editor-panel { width: 100%; padding: 38rpx 32rpx 30rpx; border-radius: 22rpx; background: #ffffff; }
+.form-title { display: block; color: #17191c; font-size: 36rpx; font-weight: 700; }
+.form-subtitle { display: block; margin-top: 8rpx; color: #8d949b; font-size: 24rpx; }
+.date-picker-value { height: 88rpx; margin-top: 26rpx; padding: 0 20rpx; border: 1rpx solid #e1e4e7; border-radius: 12rpx; color: #17191c; font-size: 30rpx; line-height: 88rpx; }
+.form-actions { display: flex; gap: 18rpx; margin-top: 30rpx; }
+.form-button { flex: 1; height: 78rpx; margin: 0; border-radius: 10rpx; font-size: 26rpx; line-height: 78rpx; }
+.form-button.ghost { border: 1rpx solid #e1e4e7; background: #ffffff; color: #555d64; }
+.form-button.dark { background: #17191c; color: #ffffff; }
 </style>

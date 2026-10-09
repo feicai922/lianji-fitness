@@ -1,5 +1,5 @@
 const BACKUP_VERSION = 1
-const TABLE_NAMES = ['exercise', 'train_record', 'weight_record', 'check_in']
+const TABLE_NAMES = ['exercise', 'train_record', 'weight_record', 'check_in', 'gym_card']
 const REQUIRED_TABLE_NAMES = ['exercise', 'train_record', 'weight_record']
 const PART_PREFERENCE_KEYS = ['fitness_train_custom_parts_v1', 'fitness_train_parts_order_v1', 'fitness_train_parts_v2']
 const EXERCISE_ORDER_KEY = 'fitness_exercise_order_v1'

@@ -22,3 +22,22 @@ test('registers a mobile monthly check-in calendar with cardio and part statisti
   assert.match(source, /changeMonth\(-1\)/)
   assert.match(source, /changeMonth\(1\)/)
 })
+
+test('shows a gym card expiry panel with three-level colour feedback', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'index.vue'), 'utf8')
+  assert.match(source, /健身房卡/)
+  assert.match(source, /getGymCard/)
+  assert.match(source, /saveGymCard/)
+  assert.match(source, /getCardStatus/)
+  assert.match(source, /mode="date"/)
+  assert.match(source, /card-status/)
+  assert.match(source, /card-empty/)
+})
+
+test('summarizes part days from training-page labels only', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'index.vue'), 'utf8')
+  assert.match(source, /loadParts/)
+  assert.match(source, /resolvePartLabel/)
+  assert.match(source, /summarizeMonth\(this\.mappedRecords, this\.monthKey, this\.knownParts\)/)
+  assert.match(source, /unmatchedDays/)
+})
