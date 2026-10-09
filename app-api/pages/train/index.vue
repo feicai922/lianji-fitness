@@ -200,12 +200,15 @@ export default {
     },
     async syncTodayTrainingCheckIn() {
       const checkedKeys = readTodayChecks()
-      const parts = [...new Set(this.allExercises
+      const parts = loadParts()
+      // 打卡按「训练记录」页的部位标签记录（背阔肌 -> 背），而不是动作的细分部位，
+      // 这样打卡页的统计口径和训练页看到的标签一致。
+      const matched = this.allExercises
         .filter((exercise) => checkedKeys.some((key) => key.startsWith(String(exercise.id) + ':')))
-        .map((exercise) => exercise.targetPart || exercise.target)
-        .filter(Boolean))]
+        .map((exercise) => resolvePartLabel(parts, exercise))
+        .filter(Boolean)
       const today = formatDate()
-      await saveCheckIn(syncTrainingCheckIn(await getCheckIn(today), today, parts))
+      await saveCheckIn(syncTrainingCheckIn(await getCheckIn(today), today, [...new Set(matched)]))
     },
     openSettings() {
       uni.navigateTo({ url: '/pages/settings/index' })

@@ -160,6 +160,16 @@ function matchesPart(parts, exercise, partLabel) {
   return targets.includes(exerciseTarget)
 }
 
+// 把动作反查成它在训练页归属的部位标签（背阔肌 -> 背）。
+// 命中多个标签时取第一个；没有任何标签覆盖时回退为动作自身的部位名。
+function resolvePartLabel(parts, exercise) {
+  const exerciseTarget = cleanText(exercise && (exercise.target || exercise.targetPart))
+  if (!exerciseTarget) return ''
+  const found = (Array.isArray(parts) ? parts : [])
+    .find((part) => Array.isArray(part.targets) && part.targets.includes(exerciseTarget))
+  return found ? found.label : exerciseTarget
+}
+
 function addPart(parts, { label, targets, availableTargets = [] }) {
   const name = cleanText(label)
   const targs = normalizePartTargets(targets, availableTargets)
@@ -250,6 +260,7 @@ export {
   saveParts,
   getPartMatchTargets,
   matchesPart,
+  resolvePartLabel,
   addPart,
   removePart,
   reorderPart,

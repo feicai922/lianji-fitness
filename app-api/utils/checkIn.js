@@ -1,3 +1,5 @@
+const CARDIO_PART = '有氧'
+
 function cleanDate(value) {
   const text = String(value || '')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return ''
@@ -83,22 +85,29 @@ function createMonthGrid(monthKey, records, todayKey) {
   })
 }
 
-function summarizeMonth(records, monthKey) {
-  const result = { checkedDays: 0, trainingDays: 0, cardioDays: 0, partDays: {} }
+// 只统计「训练记录」页真实存在的部位标签；匹配不到标签的动作不计入部位天数。
+function summarizeMonth(records, monthKey, knownParts = null) {
+  const allow = Array.isArray(knownParts) && knownParts.length ? new Set(knownParts) : null
+  const result = { checkedDays: 0, trainingDays: 0, cardioDays: 0, partDays: {}, unmatchedDays: 0 }
   for (const record of filterMonth(records, monthKey)) {
     result.checkedDays += 1
     if (record.trainingParts.length) {
       result.trainingDays += 1
-      for (const part of record.trainingParts) result.partDays[part] = (result.partDays[part] || 0) + 1
+      const counted = allow ? record.trainingParts.filter((part) => allow.has(part)) : record.trainingParts
+      if (allow && !counted.length) result.unmatchedDays += 1
+      for (const part of counted) result.partDays[part] = (result.partDays[part] || 0) + 1
     } else if (record.cardioChecked) {
       result.cardioDays += 1
-      result.partDays['有氧'] = (result.partDays['有氧'] || 0) + 1
+      if (!allow || allow.has(CARDIO_PART)) {
+        result.partDays[CARDIO_PART] = (result.partDays[CARDIO_PART] || 0) + 1
+      }
     }
   }
   return result
 }
 
 export {
+  CARDIO_PART,
   normalizeCheckIn,
   syncTrainingCheckIn,
   createCardioCheckIn,

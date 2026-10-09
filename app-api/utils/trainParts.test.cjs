@@ -132,3 +132,22 @@ test('normalizes a multi-selected all target into every available source target'
   )
   assert.deepEqual(result, [{ label: P.CORE, targets: [P.ABDOMEN, P.CHEST, P.BACK] }])
 })
+
+test('resolves an exercise back to its training-page part label', async () => {
+  const { resolvePartLabel, defaultParts, addPart } = await import('./trainParts.js')
+  const parts = defaultParts()
+  // 细分部位归到默认标签
+  assert.equal(resolvePartLabel(parts, { target: P.LATS }), P.BACK)
+  assert.equal(resolvePartLabel(parts, { target: P.UPPER_BACK }), P.BACK)
+  assert.equal(resolvePartLabel(parts, { target: P.QUADS }), P.LEG)
+  assert.equal(resolvePartLabel(parts, { target: P.CHEST }), P.CHEST)
+  // targetPart 字段同样生效
+  assert.equal(resolvePartLabel(parts, { targetPart: P.GLUTES }), P.LEG)
+  // 自定义标签优先被命中
+  const withCore = addPart(parts, { label: P.CORE, targets: [P.ABDOMEN] })
+  assert.equal(resolvePartLabel(withCore, { target: P.ABDOMEN }), P.CORE)
+  // 没有任何标签覆盖时回退为动作自身部位
+  assert.equal(resolvePartLabel(parts, { target: P.ABDOMEN }), P.ABDOMEN)
+  assert.equal(resolvePartLabel(parts, { target: '' }), '')
+  assert.equal(resolvePartLabel(parts, null), '')
+})
