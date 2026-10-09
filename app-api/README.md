@@ -1,62 +1,109 @@
-# 健身记录 UniApp
+# 练记 · Fitness Record App
 
-这是一个面向安卓竖屏的 UniApp Vue3 健身记录 APP，采用浅色极简界面，包含训练记录、动作教程、训练录入和体重趋势管理。
+> 基于 HBuilderX UniApp Vue3 + uViewUI3 开发的简约轻量化安卓健身记录 App，仅适配安卓端，浅色极简原生风格，全部界面中文。
 
-根目录保留 `index.html` 作为 Vue3 + Vite H5 运行入口；如果新建工程时缺失该文件，HBuilderX 会提示“根目录缺少 index.html”并停止编译。
+## 目标
 
-## 已实现功能
+用户打开后直接进入训练记录页，按部位切换动作；可以从全量动作库搜索并添加动作、查看所在线教程、按组记录训练数据，并在体重管理页记录体重和查看趋势，在打卡页回顾训练频率。
 
-- 训练记录与体重管理两个底部 Tab。
-- 胸、肩、背、腿、有氧五个动作部位切换。
-- 从 `static/json/clean_fitness_zh.json` 添加动作，弹窗支持按中文动作名称搜索。
-- 动作库会随 APP 内置打包，首次读取后缓存到本地，动作搜索不依赖网络。
-- 动作卡片展示最近训练记录，支持查看教程、录入训练和长按删除。
-- 动作名称、分类和中文分步教学随 APP 本地内置；教程 GIF 从数据集的 GitHub HTTPS 地址在线加载，网络失败时仍保留中文步骤。
-- 安卓 App-Plus 使用 SQLite；H5/浏览器预览自动使用本地存储降级。
-- 体重记录、`uni-data-charts` 趋势折线和长按删除历史体重。
+## 设计决策
 
-## 数据清洗
+- 采用「训练优先」布局：训练 Tab 首屏直接展示动作列表，体重、打卡、预览各自独立 Tab。
+- `data/clean_fitness_zh.js` 是打包进 App 的动作库数据源（ESM 导出），`static/json/clean_fitness_zh.json` 是同一份数据的 JSON 版本，供脚本与测试使用；字段固定为 `id`、`name_zh`、`target`、`media_id`、`instructions_zh`。
+- 原始数据使用 `name`、`instructions.zh` 和肌群型 `target` 值，由 `scripts/clean_exercises.cjs` 负责字段归一化、部位映射、中文名称生成和空值过滤。
+- 部位映射：`pectorals`、`serratus anterior` → 胸；`delts` → 肩；`upper back`、`lats`、`spine`、`traps`、`levator scapulae` → 背；`glutes`、`quads`、`hamstrings`、`calves`、`adductors`、`abductors` → 腿；`cardiovascular system` → 有氧。其他肌群过滤。
+- 中文名称优先使用本地短语词典对英文动作名逐段翻译；未命中时调用外部翻译脚本 `scripts/translation.cjs`（结果缓存在 `data/.translation-cache.json`，已 gitignore）；仍未命中时用英文动作名的可读中文兜底，保证 `name_zh` 非空且用户可搜索。
+- 安卓 App 使用 `plus.sqlite`；H5/浏览器开发预览使用同一套接口的 `uni.setStorageSync` 降级实现，避免页面逻辑分叉。
+- 动作不会自动全部写入用户动作表，初始列表为空；添加弹窗从全量动作库加载、按中文名称实时搜索，点击即添加。
+- 页面中所有中文均以 **可读中文字面量** 书写，不再使用 `\uXXXX` 转义。
 
-原始数据位于 `exercises-dataset-main/data/exercises.json`。实际数据的中文教学字段是 `instructions.zh`，名称是英文 `name`，清洗脚本负责将它们归一化为任务要求的五个字段。
+## 页面与交互
 
-```powershell
-node scripts/clean_exercises.cjs
-```
+### 训练记录页 `pages/train/index`
 
-输出文件为 `static/json/clean_fitness_zh.json`，当前生成 826 条有效记录，字段严格为：
+顶部是部位 Tab，由 `utils/trainParts.js` 管理：默认「全部 + 胸肩背腿有氧」，可点 `+` 新增自定义标签（一个标签可关联多个动作部位，或关联「全部」），长按标签删除其显示设置（不删动作与记录）。Tab 顺序持久化在本地存储。
+
+列表项 `components/ExerciseCard.vue` 显示动作名与最近一次训练的组详情（`组数 · 重量×次数 / 重量×次数…`），提供「查看教程」和「录入训练」（已有记录时显示「编辑训练」）。左侧拖拽手柄长按 260ms 进入拖动排序，卡片长按弹确认框删除动作并清理其训练记录。
+
+右下角悬浮 `+` 打开 `components/ExercisePicker.vue`，输入内容按 `name_zh` 不区分大小写过滤，已添加的动作显示「已添加」状态，避免重复插入。
+
+### 录入训练弹窗
+
+弹窗内每组一行：左侧圆圈点选「今日完成」、重量（数字，允许小数且 ≥ 0）、次数（正整数），可添加或删除训练组（至少保留一组）。保存时写入当前日期 `YYYY-MM-DD`；已有记录时为更新，否则为新增。取消不写入数据。
+
+勾选「今日完成」会即时同步到打卡表：按当天已勾选的动作归集其部位写入 `check_in`。
+
+### 教程详情页 `pages/detail/index`
+
+从训练页传入动作 id，读取动作数据，顶部用 `utils/media.js` 拼接的 GitHub raw 地址加载 GIF；图片失败时显示中文占位提示，不阻塞文字教程。教学内容按换行、句号和中文标点拆分成步骤逐段显示，顶部返回按钮回到训练页。
+
+### 每日打卡页 `pages/checkin/index`
+
+月历视图，可左右切换月份。当天存在训练打卡时显示深绿，有氧打卡显示浅绿，今天有描边。当天未打卡时可点「有氧打卡」按钮手动打卡；已由训练自动打卡时按钮禁用并提示。下方展示本月已打卡天数、训练天数、有氧天数，以及按部位的训练天数统计。
+
+### 体重管理页 `pages/weight/index`
+
+输入当日体重并保存写入 `weight_record`；同一天重复保存会追加记录。折线图使用 `qiun-data-charts`，无历史数据时显示空状态；长按记录二次确认后删除。
+
+### 动作预览页 `pages/preview/index`
+
+使用 `swiper` 左右滑动逐个查看当前部位的动作教程。为控制内存，只渲染当前项前后共 3 个 slide（`windowStart` 窗口滑动）。顶部搜索框按名称过滤，点击结果直接跳转到对应 slide。右上角可添加自定义部位。
+
+### 设置页 `pages/settings/index`
+
+「导出数据」把完整备份 JSON 复制到剪贴板；「导入数据」从剪贴板读取并整体覆盖本地数据。备份格式由 `utils/backup.js` 定义（`version` / `exportedAt` / `data` / `preferences`），除四张数据表外还会带上自定义部位与动作排序等偏好设置。
+
+### 底部 Tab
+
+使用原生 tabBar 配置，共四个：「训练记录」「体重管理」「每日打卡」「动作预览」。白底、黑色正文、浅灰分割线，无多余动画。
+
+## 数据流
 
 ```text
-id, name_zh, target, media_id, instructions_zh
+exercises.json（第三方数据集）
+  -> scripts/clean_exercises.cjs (+ scripts/translation.cjs 翻译)
+  -> data/clean_fitness_zh.js + static/json/clean_fitness_zh.json
+  -> 添加动作弹窗 / 动作预览页（搜索 name_zh）
+  -> sqlite.exercise
+  -> 训练列表 / 教程详情 / 训练记录
+
+训练录入（按组）      -> sqlite.train_record  -> 卡片最近记录
+「今日完成」勾选      -> utils/dailySetCheck -> utils/checkIn -> sqlite.check_in
+有氧手动打卡          -> sqlite.check_in     -> 打卡月历 + 本月统计
+体重录入              -> sqlite.weight_record -> 趋势图 + 历史列表
+导出/导入             -> utils/backup.js     -> 剪贴板 JSON
 ```
 
-为了兼容 Android App-Plus，清洗脚本同时生成 `data/clean_fitness_zh.js` 作为内置数据包。`utils/catalog.js` 首次从内置数据写入 `uni.setStorageSync('clean_fitness_catalog_v1')`，后续优先读取本地缓存；因此动作库不需要联网，也不依赖 App 端对 `/static` 路径的请求支持。
+## 错误与边界
 
-部位映射规则：
+- 动作库加载失败时显示「动作库加载失败，请重试」，允许关闭弹窗重试。
+- JSON 中缺少 id、中文名、部位、media_id 或中文教学的记录不输出；空白字符串也视为空值。
+- GIF 加载失败不阻塞文字教程。
+- 重复添加动作不插入第二条；删除动作前弹窗确认，并清理关联训练记录。
+- SQLite 未就绪、非 App 环境或 SQL 异常时统一降级到本地存储并保留页面可用性。
+- 所有录入表单在提交前校验数值和空值，失败只提示，不写入半成品数据。
+- 导入备份时校验版本与必需数据表，格式不符直接报错且不改动现有数据。
 
-```text
-pectorals / serratus anterior -> 胸
-delts -> 肩
-upper back / lats / spine / traps / levator scapulae -> 背
-glutes / quads / hamstrings / calves / adductors / abductors -> 腿
-cardiovascular system -> 有氧
-```
-
-无法归入五个部位或缺少必需字段的记录会被过滤。中文名称优先使用本地动作短语词典，未命中的动作使用可读中文词语组合兜底；中文教学直接取数据集中的 `instructions.zh`。
-
-## HBuilderX 使用
-
-1. 用 HBuilderX 打开当前目录。
-2. 当前工程已经导入 `uview-plus@3.8.90` 和 `qiun-data-charts@2.5.0-20230101`，`main.js` 与 `pages.json` 已完成注册；如重新创建工程，再从插件市场导入这两个插件。
-3. 运行到 Android App 基座或连接安卓真机；首次运行会自动创建 `_doc/fitness_record.db`。
-4. API 版采用混合模式：中文动作元数据和步骤本地读取，教程 GIF 使用 GitHub HTTPS 地址，需要网络；网络不可用时仍可查看中文文字步骤。
-5. 云打包前在 `manifest.json` 中补充应用图标、包名、签名证书和正式版本信息。
-
-## 检查命令
+## 测试
 
 ```powershell
-node --test scripts/clean_exercises.test.cjs utils/sqlite.test.cjs
-node --check scripts/clean_exercises.cjs
-node --check utils/sqlite.js
+npm run test:data
 ```
 
-当前没有配置 CLI 打包链，最终 APK 需要通过 HBuilderX 的 Android 云打包流程生成。
+覆盖数据清洗、翻译解析、SQLite 数据层、备份导入导出、动作排序、打卡逻辑、自定义部位，以及训练/设置/预览/打卡四个页面的组件逻辑。当前 51 个用例全部通过。
+
+## 验收标准
+
+1. 清洗脚本可以从 `exercises-dataset-main/data/exercises.json` 生成合法 UTF-8 数据，字段严格为 5 个，且只有五个中文部位。
+2. 训练页默认打开，部位 Tab 可切换；添加弹窗支持按中文名称搜索、添加和防重复；可新增与删除自定义部位标签。
+3. 动作教程可展示指定在线 GIF、中文名称和分段教学；动作预览页可左右滑动浏览。
+4. 训练录入可按组保存不同的重量与次数，卡片显示最近记录，可编辑、拖拽排序、长按删除。
+5. 「今日完成」勾选当天保留、次日清空，并可在打卡页看到对应记录。
+6. 体重录入、趋势图、历史列表和长按删除可用。
+7. 打卡页月历、有氧手动打卡与本月统计可用。
+8. 导出/导入备份可完整还原数据与偏好设置。
+9. 安卓 App 使用 SQLite 表结构，浏览器预览不因 `plus.sqlite` 不存在而报错。
+
+---
+
+Source of truth: `task.md`, docs under `docs/superpowers/`.
