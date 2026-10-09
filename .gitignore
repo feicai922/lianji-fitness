@@ -33,6 +33,8 @@
 # Original dataset used only to regenerate processed assets
 **/exercises-dataset-main/
 
+**/.translation-cache.json
+config.txt
 # Android packages are uploaded as GitHub Release assets, not source files
 *.apk
 *.aab

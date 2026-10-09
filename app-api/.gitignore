@@ -3,3 +3,4 @@ dist/
 unpackage/
 .superpowers/
 *.log
+**/.translation-cache.json
