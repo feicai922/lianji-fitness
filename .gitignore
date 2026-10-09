@@ -33,6 +33,12 @@
 # Original dataset used only to regenerate processed assets
 **/exercises-dataset-main/
 
+# App data backups exported from the device (contains personal training data)
+export.json
+export-*.json
+**/export.json
+**/export-*.json
+
 **/.translation-cache.json
 config.txt
 # Android packages are uploaded as GitHub Release assets, not source files
