@@ -6,7 +6,7 @@
         "navigationBarTitleText": "训练记录",
         "navigationBarBackgroundColor": "#ffffff",
         "navigationBarTextStyle": "black",
-        "enablePullDownRefresh": false
+        "enablePullDownRefresh": true
       }
     },
     {
@@ -22,6 +22,30 @@
       "path": "pages/detail/index",
       "style": {
         "navigationBarTitleText": "动作教程",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/preview/index",
+      "style": {
+        "navigationBarTitleText": "动作预览",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/checkin/index",
+      "style": {
+        "navigationBarTitleText": "每日打卡",
+        "navigationBarBackgroundColor": "#ffffff",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "设置",
         "navigationBarBackgroundColor": "#ffffff",
         "navigationBarTextStyle": "black"
       }
@@ -55,6 +79,14 @@
       {
         "pagePath": "pages/weight/index",
         "text": "体重管理"
+      },
+      {
+        "pagePath": "pages/checkin/index",
+        "text": "每日打卡"
+      },
+      {
+        "pagePath": "pages/preview/index",
+        "text": "动作预览"
       }
     ]
   }

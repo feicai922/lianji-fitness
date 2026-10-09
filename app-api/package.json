@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "clean-data": "node scripts/clean_exercises.cjs",
-    "test:data": "node --test scripts/clean_exercises.test.cjs utils/sqlite.test.cjs utils/catalog.test.cjs utils/media.test.cjs"
+    "test:data": "node --test scripts/clean_exercises.test.cjs scripts/translation.test.cjs utils/sqlite.test.cjs utils/backup.test.cjs utils/exerciseOrder.test.cjs utils/catalog.test.cjs utils/media.test.cjs utils/dailySetCheck.test.cjs utils/checkIn.test.cjs pages/train/index.test.cjs pages/settings/index.test.cjs pages/preview/index.test.cjs pages/checkin/index.test.cjs utils/trainParts.test.cjs"
   },
   "dependencies": {
     "@dcloudio/uni-ui": "^1.5.11",

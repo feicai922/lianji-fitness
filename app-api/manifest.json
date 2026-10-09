@@ -1,21 +1,30 @@
 {
-  "name": "健身记录",
-  "appid": "__UNI__FITNESSRECORD",
-  "description": "轻量化中文健身记录 App",
-  "versionName": "1.0.0",
-  "versionCode": "100",
-  "vueVersion": "3",
-  "transformPx": false,
-  "app-plus": {
-    "usingComponents": true,
-    "nvueStyleCompiler": "uni-app",
-    "compilerVersion": 3,
-    "distribute": {
-      "android": {
-        "permissions": [
-          "android.permission.INTERNET"
-        ]
-      }
+    "name" : "练记",
+    "appid" : "__UNI__121D2A9",
+    "description" : "轻量化中文健身记录 App",
+    "versionName" : "1.0.8",
+    "versionCode" : "100",
+    "vueVersion" : "3",
+    "transformPx" : false,
+    "app-plus" : {
+        "usingComponents" : true,
+        "nvueStyleCompiler" : "uni-app",
+        "compilerVersion" : 3,
+        "distribute" : {
+            "android" : {
+                "permissions" : [ "<uses-permission android:name=\"android.permission.INTERNET\"/>" ]
+            },
+            "ios" : {
+                "dSYMs" : false
+            },
+            "icons" : {
+                "android" : {
+                    "hdpi" : "C:/Users/mechrevo/Pictures/保存/哑铃.png"
+                }
+            }
+        },
+        "modules" : {
+            "SQLite" : {}
+        }
     }
-  }
 }
