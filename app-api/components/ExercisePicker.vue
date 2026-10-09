@@ -4,7 +4,8 @@
       <view class="picker-header">
         <view>
           <text class="picker-title">添加动作</text>
-          <text class="picker-subtitle">添加到「{{ part }}」</text>
+          <text v-if="part === '全部'" class="picker-subtitle">从全量动作库中选择</text>
+          <text v-else class="picker-subtitle">添加到「{{ part }}」</text>
         </view>
         <text class="close-button" @click="$emit('close')">×</text>
       </view>
