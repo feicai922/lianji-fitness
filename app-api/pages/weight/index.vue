@@ -64,12 +64,22 @@ export default {
       }
     },
     chartOpts() {
+      // qiun/uCharts 在 enableScroll 时用 xAxis.itemCount 计算点间距；
+      // 不显式赋值会让 eachSpacing 变成 NaN，所有点坐标失效、整张图不渲染。
+      const enableScroll = this.weights.length > 7
       return {
         color: ['#8b939a'],
         padding: [20, 12, 10, 12],
-        enableScroll: this.weights.length > 7,
+        enableScroll,
         legend: { show: false },
-        xAxis: { disableGrid: true, axisLineColor: '#e7e9eb', labelTextColor: '#9aa0a6' },
+        xAxis: {
+          disableGrid: true,
+          axisLineColor: '#e7e9eb',
+          labelTextColor: '#9aa0a6',
+          itemCount: enableScroll ? 7 : this.weights.length,
+          scrollShow: true,
+          scrollAlign: 'right'
+        },
         yAxis: { gridType: 'dash', dashLength: 2, gridColor: '#eef0f1', axisLineColor: '#ffffff', labelTextColor: '#9aa0a6' },
         extra: { line: { type: 'curve', width: 2, activeType: 'hollow' } }
       }
