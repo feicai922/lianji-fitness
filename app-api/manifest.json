@@ -2,7 +2,7 @@
     "name" : "练记",
     "appid" : "__UNI__121D2A9",
     "description" : "轻量化中文健身记录 App",
-    "versionName" : "1.0.8",
+    "versionName" : "1.0.9",
     "versionCode" : "100",
     "vueVersion" : "3",
     "transformPx" : false,
